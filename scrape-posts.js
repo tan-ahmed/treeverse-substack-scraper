@@ -33,6 +33,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
     const page = await browser.newPage();
     await page.goto(post.link, { waitUntil: "networkidle2" });
 
+    // ✅ Wait specifically for available-content to exist
+    try {
+      await page.waitForSelector(".available-content", { timeout: 10000 });
+    } catch (err) {
+      console.warn(`⚠️  available-content not found for: ${post.title}`);
+    }
+
     const html = await page.content();
     const $ = cheerio.load(html);
 
@@ -44,7 +51,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
         .filter((_, el) => {
           return $(el)
             .text()
-            .match(/[A-Za-z]{3,} \d{1,2}, \d{4}/);
+            .match(/[A-Za-z]{3,} \\d{1,2}, \\d{4}/);
         })
         .first();
       date = dateDiv.text().trim();
