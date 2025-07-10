@@ -1,11 +1,15 @@
 // scrape-posts.js
 import puppeteer from "puppeteer";
-import * as cheerio from "cheerio";
+import { createRequire } from "node:module";
 import fs from "fs-extra";
 import path from "path";
 import slugify from "slugify";
+import { fileURLToPath } from "url";
 
-const __dirname = path.resolve();
+const require = createRequire(import.meta.url);
+const cheerio = require("cheerio");
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 (async () => {
   const archivePath = path.join(__dirname, "data", "archive.json");
@@ -32,48 +36,31 @@ const __dirname = path.resolve();
     const html = await page.content();
     const $ = cheerio.load(html);
 
-    // ✅ Better DATE fallback
+    // Use fallback for date
     let date = $("time").attr("datetime") || "";
     if (!date) {
       const dateDiv = $('[aria-label="Post UFI"]')
         .find("div")
-        .filter((_, el) =>
-          $(el)
+        .filter((_, el) => {
+          return $(el)
             .text()
-            .match(/[A-Za-z]{3,} \d{1,2}, \d{4}/)
-        )
+            .match(/[A-Za-z]{3,} \d{1,2}, \d{4}/);
+        })
         .first();
-      date = dateDiv.text().trim() || "";
+      date = dateDiv.text().trim();
     }
 
-    // ✅ More robust CONTENT fallback:
-    let content = $("article").html()?.trim() || "";
-
-    if (!content) {
-      // Try known container classes as fallback
-      const fallbackSelectors = [
-        ".single-post-container",
-        ".single-post",
-        "main",
-        "[role='main']",
-      ];
-
-      for (const selector of fallbackSelectors) {
-        const alt = $(selector).html();
-        if (alt && alt.trim().length > 0) {
-          content = alt.trim();
-          break;
-        }
-      }
-    }
-
-    // Clean up
-    content = content.replace(/\s+/g, " ").trim();
+    // Try multiple selectors for content
+    let content =
+      $(".available-content").html()?.trim() ||
+      $(".post-content").html()?.trim() ||
+      $("article").html()?.trim() ||
+      "";
 
     const postData = {
       title: post.title,
       link: post.link,
-      date: date.trim(),
+      date,
       content,
     };
 
