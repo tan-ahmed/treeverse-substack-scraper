@@ -6,6 +6,7 @@
   "scripts": {
     "scrape:archive": "node scrape-archive.js",
     "scrape:posts": "node scrape-posts.js",
+    "scrape:single": "node scrape-single.js",
     "start": "node scrape-archive.js && node scrape-posts.js"
   },
   "dependencies": {
